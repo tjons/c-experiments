@@ -8,7 +8,7 @@
 #define true 1
 
 void help() {
-	printf("usage: tycp <options> [SOURCE] [TARGET]\n");
+	printf("usage: _cp <options> [SOURCE] [TARGET]\n");
 	printf("	options: [-R -v]\n");
 	printf("	-R: recursive\n");
 	printf("	-v: verbose\n");
