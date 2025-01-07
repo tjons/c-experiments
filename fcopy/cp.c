@@ -2,10 +2,13 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <strings.h>
+#include <errno.h>
 #define bool int
 #define false 0
 #define true 1
+
 
 void help() {
 	printf("usage: _cp <options> [SOURCE] [TARGET]\n");
@@ -13,6 +16,36 @@ void help() {
 	printf("	-R: recursive\n");
 	printf("	-v: verbose\n");
 	exit(1);
+}
+
+int copyfile(char *from, char *to)
+{
+		FILE *source = fopen(from, "r");
+		if (source == NULL) {
+			perror("source file not found");
+			return 2;
+		}
+		FILE *target = fopen(to, "w");
+		if (target == NULL) {
+			perror("error creating target file");
+			return 1;
+		}
+
+		int c;
+
+		while ((c = fgetc(source)) != EOF) {
+			fprintf(target, "%c", c);	
+		}
+
+		fclose(source);
+		fclose(target);
+
+        return 0;
+}
+
+bool abspath(char *path)
+{
+    return path[0] == '/';
 }
 
 int main(int argc, char *argv[])
@@ -41,38 +74,55 @@ int main(int argc, char *argv[])
     }
 
 	struct stat sb;
-	int errn = lstat(argv[1], &sb);
+	int errn = lstat(from, &sb);
 	if (errn != 0) {
 		exit(1);
 	}
 
     if (S_ISDIR(sb.st_mode)) {
-		DIR *s_dir = opendir(argv[1]);
+        struct stat target_dir;
+        if (stat(to, &target_dir) == -1) {
+            mkdir(to, sb.st_mode);
+        }
+
+		DIR *s_dir = opendir(from);
 		if (s_dir != NULL) {
-			// copy directory from source to target
-			
-		}
-	} else {
-		FILE *source = fopen(argv[1], "r");
-		if (source == NULL) {
-			printf("%s not found.", argv[1]);
-			exit(1);
-		}
-		FILE *target = fopen(argv[2], "w");
-		if (target == NULL) {
-			printf("error creating %s", argv[2]);
-			exit(1);
-		}
+			// copy directory, file-by-file, from source to target
+            struct dirent *f;
+            struct stat s;
+            while (f = readdir(s_dir)) {
+                printf("%s\n", f->d_name);
+                if (strcmp(f->d_name, ".") == 0 || strcmp(f->d_name, "..") == 0) continue;
 
-		int c;
+                char fn[strlen(from)+strlen(f->d_name)];
+                strcpy(fn, from);
+                strcat(fn, f->d_name);
+                printf("%s\n", fn);
+                if (lstat(fn, &s) == -1) {
+                        perror("could not stat %s");
+                        continue;
+                }
 
-		while ((c = fgetc(source)) != EOF) {
-			fprintf(target, "%c", c);	
+                if (S_ISDIR(s.st_mode)) {
+                    // construct path, recursively handle directory
+                    continue;
+                }
+
+                if (S_ISREG(s.st_mode)) {
+                    char from_path[strlen(from)+strlen(f->d_name)];
+                    strcpy(from_path, from);
+                    strcat(from_path, f->d_name);
+
+                    char to_path[strlen(to)+1+strlen(f->d_name)];
+                    strcpy(to_path, to);
+                    strcat(to_path, "/");
+                    strcat(to_path, f->d_name);
+
+                    if (copyfile(from_path, to_path) != 0) exit(1);
+                }
+            }
 		}
-
-		fclose(source);
-		fclose(target);
-	}
+	} else if (copyfile(from, to) != 0) exit(1);
 		
 	return 0;
 }
