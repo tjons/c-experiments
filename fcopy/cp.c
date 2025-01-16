@@ -175,6 +175,14 @@ int main(int argc, char *argv[])
             help();
     }
 
+    if (from_path[strlen(from_path)-1] == '/') {
+        from_path[strlen(from_path)-1] = '\0';
+    }
+
+    if (to_path[strlen(to_path)-1] == '/') {
+        to_path[strlen(to_path)-1] = '\0';
+    }
+
     struct stat from_stat;
     if (lstat(from_path, &from_stat) != 0)
     {
