@@ -20,6 +20,14 @@ void help()
     exit(1);
 }
 
+void write_verbose(char *message)
+{
+    if (verbose)
+        printf("%s\n", message);
+
+    return;
+}
+
 // copyfile will copy the file located at the `from` path to the
 // `to` path, creating the file if it does not exist. Currently,
 // this method does not copy the mode of the original file.
@@ -82,8 +90,9 @@ int copydir(char *from_path, struct stat *from_stat, char *to_path)
             if (strcmp(f->d_name, ".") == 0 || strcmp(f->d_name, "..") == 0)
                 continue;
 
-            char fn[strlen(from_path) + strlen(f->d_name)];
+            char fn[strlen(from_path) + 1 + strlen(f->d_name) + 1];
             strcpy(fn, from_path);
+            strcat(fn, "/");
             strcat(fn, f->d_name);
             printf("%s\n", fn);
             if (lstat(fn, &s) == -1)
@@ -94,17 +103,27 @@ int copydir(char *from_path, struct stat *from_stat, char *to_path)
 
             if (S_ISDIR(s.st_mode))
             {
-                // construct path, recursively handle directory
-                continue;
+                char source_path[strlen(from_path) + strlen(f->d_name) + 1];
+                strcpy(source_path, from_path);
+                strcat(source_path, "/");
+                strcat(source_path, f->d_name);
+
+                char target_path[strlen(to_path) + 1 + strlen(f->d_name) + 1];
+                strcpy(target_path, to_path);
+                strcat(target_path, "/");
+                strcat(target_path, f->d_name);
+
+                if (copydir(source_path, &s, target_path) != 0) return 1;
             }
 
             if (S_ISREG(s.st_mode))
             {
-                char source_path[strlen(from_path) + strlen(f->d_name)];
+                char source_path[strlen(from_path) + strlen(f->d_name) + 1];
                 strcpy(source_path, from_path);
+                strcat(source_path, "/");
                 strcat(source_path, f->d_name);
 
-                char target_path[strlen(to_path) + 1 + strlen(f->d_name)];
+                char target_path[strlen(to_path) + 1 + strlen(f->d_name) + 1];
                 strcpy(target_path, to_path);
                 strcat(target_path, "/");
                 strcat(target_path, f->d_name);
